@@ -16,7 +16,7 @@
 
 use agb::{include_aseprite,
     display::{object::{Graphics, Tag, ObjectController, Object, TagMap}, Priority},
-    input::{self, Button, ButtonController}, fixnum::{Vector2D, FixedNum},
+    input::{self, Button, ButtonController}, fixnum::{Vector2D, FixedNum}, println,
 };
 
 // type FixedNumberType = FixedNum<10>;
@@ -88,7 +88,24 @@ impl <'a> Player <'a> {
     }
 
     pub fn update_position(&mut self, new_x: u16) {
+        self.space_ship.position.x = new_x;
         self.space_ship.sprite.set_x(new_x);
+    }
+
+
+    // Updates ther starships position on the map
+    pub fn update_frame(
+        &mut self,
+        input: &ButtonController,
+    ) {
+        if input.is_pressed(Button::LEFT) {
+            let new_x = if self.space_ship.position.x == 1 { self.space_ship.position.x } else { self.space_ship.position.x - 1};
+            self.update_position(new_x);
+        }
+        if input.is_pressed(Button::RIGHT) {
+            let new_x = if self.space_ship.position.x == agb::display::WIDTH as u16 - 16 { self.space_ship.position.x } else { self.space_ship.position.x + 1};
+            self.update_position(new_x);
+        }
     }
 }
 
@@ -108,36 +125,38 @@ fn main(mut gba: agb::Gba) -> ! {
     // Get the OAM manager
     let display_object = gba.display.object.get();
 
+    // Player input
+    let mut button_object = agb::input::ButtonController::new();
+
     // Create an object with the player_craft sprite
     let mut player_craft = Player::new(&display_object, 
         Vector2D { x: (50), y: (agb::display::HEIGHT as u16 - BOTTOM_OF_SCREEN_OFFSET) });
 
+    // Adds alien to the map
     let mut alien = display_object.object_sprite(ALIEN1.sprite(0));
-
-
-    // Place craft on the screen
-    // player_craft.set_x(50).set_y(agb::display::HEIGHT as u16 - BOTTOM_OF_SCREEN_OFFSET).show();
 
     alien.set_x(50).set_y(50).show();
 
-    let mut player_craft_x = 50;
+    // let mut player_craft_x = 50;
     let mut alien_x = 50;
-    let mut x_velocity = 3;
+    // let mut x_velocity = 3;
     let mut ax_velo = 1;
 
 loop {
     // This will calculate the new position and enforce the position
     // of the player_craft remains within the screen
-    player_craft_x = (player_craft_x + x_velocity).clamp(0, agb::display::WIDTH - 16);
+    // player_craft_x = (player_craft_x + x_velocity).clamp(0, agb::display::WIDTH - 16);
+    button_object.update();
+    player_craft.update_frame(&button_object);
 
     // This will calculate the new position and enforce the position
     // of the alien remains within the screen
     alien_x = (alien_x + ax_velo).clamp(0, agb::display::WIDTH - 16);
 
     // We check if the player_craft reaches the edge of the screen and reverse it's direction
-    if player_craft_x == 0 || player_craft_x == agb::display::WIDTH - 16 {
-        x_velocity = -x_velocity;
-    }
+    // if player_craft_x == 0 || player_craft_x == agb::display::WIDTH - 16 {
+    //     x_velocity = -x_velocity;
+    // }
 
     // We check if the alien reaches the edge of the screen and reverse it's direction
     if alien_x == 0 || alien_x == agb::display::WIDTH - 16 {
@@ -146,7 +165,7 @@ loop {
 
     // Set the position of the player_craft and alien to match our new calculated position
     // For the player craft the Y doesn't matter
-    player_craft.update_position(player_craft_x as u16);
+    // player_craft.update_position(player_craft_x as u16);
     alien.set_x(alien_x as u16);
 
     // Wait for vblank, then commit the objects to the screen
