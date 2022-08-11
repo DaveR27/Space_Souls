@@ -43,49 +43,54 @@ const TAG_MAP: &TagMap = GRAPHICS.tags();
 const SPACE_SHIP: &Tag = TAG_MAP.get("Space_Ship");
 const ALIEN1: &Tag = TAG_MAP.get("Alien1");
 
-// pub struct Entity<'a> {
-//     sprite: Object<'a>,
-//     position: Vector2D<FixedNumberType>,
-//     velocity: Vector2D<FixedNumberType>,
-//     collision_mask: Vector2D<u16>
-// }
+pub struct Entity<'a> {
+    sprite: Object<'a>,
+    position: Vector2D<u16>,
+    velocity: i32,
+    collision_mask: Vector2D<u16>
+}
 
-// impl <'a> Entity <'a> {
-//     pub fn new(object: &'a ObjectController, collision_mask: Vector2D<u16>) -> Self {
-//         let dummy_sprite = object.sprite(SPACE_SHIP.sprite(0));
-//         let mut sprite = object.object(dummy_sprite);
-//         sprite.set_priority(Priority::P1);
-//         Entity {
-//             sprite,
-//             collision_mask,
-//             position: (0, 0).into(),
-//             velocity: (0, 0).into(),
-//         }
-//     }
-// }
+impl <'a> Entity <'a> {
+    pub fn new(object: &'a ObjectController, collision_mask: Vector2D<u16>) -> Self {
+        let dummy_sprite = object.sprite(SPACE_SHIP.sprite(0));
+        let mut sprite = object.object(dummy_sprite);
+        sprite.set_priority(Priority::P1);
+        Entity {
+            sprite,
+            collision_mask,
+            position: Vector2D { x: (0), y: (0) },
+            velocity: 1,
+        }
+    }
+}
 
-// struct Player<'a> {
-//     space_ship: Entity<'a>,
-//     ammo: u8,
-// }
+struct Player<'a> {
+    space_ship: Entity<'a>,
+    ammo: u8,
+}
 
-// impl <'a> Player <'a> {
-//     fn new(controller: &'a ObjectController, start_position: Vector2D<FixedNumberType>) -> Self {
-//         let mut space_ship = Entity::new(controller, (6_u16, 14_u16).into());
+impl <'a> Player <'a> {
+    fn new(controller: &'a ObjectController, start_position: Vector2D<u16>) -> Self {
+        let mut space_ship = Entity::new(controller, (6_u16, 14_u16).into());
     
-//         space_ship.sprite
-//             .set_sprite(controller.sprite(SPACE_SHIP.sprite(0))); 
+        space_ship.sprite
+            .set_sprite(controller.sprite(SPACE_SHIP.sprite(0))); 
 
-//         space_ship.sprite.show();
+        space_ship.position = start_position;
 
-//         space_ship.position = start_position;
+        space_ship.sprite.set_x(space_ship.position.x).set_y(space_ship.position.y).show();
 
-//         Player {
-//             space_ship,
-//             ammo: 0,
-//         }
-//     }
-// }
+
+        Player {
+            space_ship,
+            ammo: 0,
+        }
+    }
+
+    pub fn update_position(&mut self, new_x: u16) {
+        self.space_ship.sprite.set_x(new_x);
+    }
+}
 
 
 // The main function must take 1 arguments and never return. The agb::entry decorator
@@ -104,19 +109,20 @@ fn main(mut gba: agb::Gba) -> ! {
     let display_object = gba.display.object.get();
 
     // Create an object with the player_craft sprite
-    let mut player_craft = display_object.object_sprite(SPACE_SHIP.sprite(0));
+    let mut player_craft = Player::new(&display_object, 
+        Vector2D { x: (50), y: (agb::display::HEIGHT as u16 - BOTTOM_OF_SCREEN_OFFSET) });
 
     let mut alien = display_object.object_sprite(ALIEN1.sprite(0));
 
 
     // Place craft on the screen
-    player_craft.set_x(50).set_y(agb::display::HEIGHT as u16 - BOTTOM_OF_SCREEN_OFFSET).show();
+    // player_craft.set_x(50).set_y(agb::display::HEIGHT as u16 - BOTTOM_OF_SCREEN_OFFSET).show();
 
     alien.set_x(50).set_y(50).show();
 
     let mut player_craft_x = 50;
     let mut alien_x = 50;
-    let mut x_velocity = 1;
+    let mut x_velocity = 3;
     let mut ax_velo = 1;
 
 loop {
@@ -139,7 +145,8 @@ loop {
     }
 
     // Set the position of the player_craft and alien to match our new calculated position
-    player_craft.set_x(player_craft_x as u16);
+    // For the player craft the Y doesn't matter
+    player_craft.update_position(player_craft_x as u16);
     alien.set_x(alien_x as u16);
 
     // Wait for vblank, then commit the objects to the screen
