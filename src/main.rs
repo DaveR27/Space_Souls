@@ -18,6 +18,7 @@ use agb::{include_aseprite,
     display::{object::{Graphics, Tag, ObjectController, Object, TagMap}, Priority},
     input::{self, Button, ButtonController}, fixnum::{Vector2D, FixedNum}, println,
 };
+use alloc::vec::Vec;
 
 // type FixedNumberType = FixedNum<10>;
 
@@ -42,6 +43,8 @@ const TAG_MAP: &TagMap = GRAPHICS.tags();
 // We define some easy ways of referencing the sprites
 const SPACE_SHIP: &Tag = TAG_MAP.get("Space_Ship");
 const ALIEN1: &Tag = TAG_MAP.get("Alien1");
+const MISSILE: &Tag = TAG_MAP.get("Missile");
+
 
 pub struct Entity<'a> {
     sprite: Object<'a>,
@@ -51,9 +54,8 @@ pub struct Entity<'a> {
 }
 
 impl <'a> Entity <'a> {
-    pub fn new(object: &'a ObjectController, collision_mask: Vector2D<u16>) -> Self {
-        let dummy_sprite = object.sprite(SPACE_SHIP.sprite(0));
-        let mut sprite = object.object(dummy_sprite);
+    pub fn new(object: &'a ObjectController, tag: &Tag, collision_mask: Vector2D<u16>) -> Self {
+        let mut sprite = object.object(object.sprite(tag.sprite(0)));
         sprite.set_priority(Priority::P1);
         Entity {
             sprite,
@@ -64,26 +66,47 @@ impl <'a> Entity <'a> {
     }
 }
 
+pub struct Ammo {
+    ammo_entity: Entity,
+    amount: u16,
+    entity_shooting: Entity <'a>,
+}
+
+impl Ammo {
+    pub fn new(controller: &'a ObjectController, entity_shooting:  Entity <'a>) {
+        let mut ammo_entity = Entity::new(controller, MISSILE, (6_u16, 14_u16).into());
+        let mut amount = 20;
+
+        Ammo {
+            ammo_entity,
+            amount,
+            entity_shooting,
+        }
+    }
+
+    pub fn fire(){
+
+    }
+}
+
 struct Player<'a> {
     space_ship: Entity<'a>,
-    ammo: u8,
+    ammo: Vec<Ammo>,
 }
 
 impl <'a> Player <'a> {
     fn new(controller: &'a ObjectController, start_position: Vector2D<u16>) -> Self {
-        let mut space_ship = Entity::new(controller, (6_u16, 14_u16).into());
+        let mut space_ship = Entity::new(controller, SPACE_SHIP, (6_u16, 14_u16).into());
     
-        space_ship.sprite
-            .set_sprite(controller.sprite(SPACE_SHIP.sprite(0))); 
-
         space_ship.position = start_position;
-
         space_ship.sprite.set_x(space_ship.position.x).set_y(space_ship.position.y).show();
+
+        let mut missle = Ammo::new(controller, self);
 
 
         Player {
             space_ship,
-            ammo: 0,
+            ammo: []
         }
     }
 
@@ -106,6 +129,9 @@ impl <'a> Player <'a> {
             let new_x = if self.space_ship.position.x == agb::display::WIDTH as u16 - 16 { self.space_ship.position.x } else { self.space_ship.position.x + 1};
             self.update_position(new_x);
         }
+        if input.is_pressed(Button::A) {
+        }
+
     }
 }
 
