@@ -68,24 +68,29 @@ impl <'a> Entity <'a> {
 
 pub struct Ammo {
     ammo_entity: Entity,
-    amount: u16,
     entity_shooting: Entity <'a>,
 }
 
 impl Ammo {
     pub fn new(controller: &'a ObjectController, entity_shooting:  Entity <'a>) {
         let mut ammo_entity = Entity::new(controller, MISSILE, (6_u16, 14_u16).into());
-        let mut amount = 20;
+
+        ammo_entity.position = entity_shooting.position;
+        ammo_entity.sprite.set_x(ammo_entity.position.x).set_y(ammo_entity.position.y).show();
 
         Ammo {
             ammo_entity,
-            amount,
             entity_shooting,
         }
     }
 
-    pub fn fire(){
+    pub fn fire(controller: &'a ObjectController, entity_shooting:  Entity <'a>){
+        Ammo::new(controller, entity_shooting);
+    }
 
+    pub fn update_position(&mut self, new_position: Vector2D<u16>) {
+        self.ammo_entity.position = new_position;
+        self.ammo_entity.sprite.set_x(new_position.x).set_y(new_position.y);
     }
 }
 
@@ -100,9 +105,6 @@ impl <'a> Player <'a> {
     
         space_ship.position = start_position;
         space_ship.sprite.set_x(space_ship.position.x).set_y(space_ship.position.y).show();
-
-        let mut missle = Ammo::new(controller, self);
-
 
         Player {
             space_ship,
@@ -130,8 +132,9 @@ impl <'a> Player <'a> {
             self.update_position(new_x);
         }
         if input.is_pressed(Button::A) {
+            Ammo::new(controller, self);
         }
-
+        // TODO: Update the ammo's frame
     }
 }
 
