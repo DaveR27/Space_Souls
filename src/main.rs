@@ -18,7 +18,7 @@ use agb::{include_aseprite,
     display::{object::{Graphics, Tag, ObjectController, Object, TagMap}, Priority},
     input::{self, Button, ButtonController}, fixnum::{Vector2D, FixedNum}, println,
 };
-use alloc::vec::Vec;
+// use alloc::vec::Vec;
 
 // type FixedNumberType = FixedNum<10>;
 
@@ -43,12 +43,12 @@ const TAG_MAP: &TagMap = GRAPHICS.tags();
 // We define some easy ways of referencing the sprites
 const SPACE_SHIP: &Tag = TAG_MAP.get("Space_Ship");
 const ALIEN1: &Tag = TAG_MAP.get("Alien1");
-const MISSILE: &Tag = TAG_MAP.get("Missile");
+// const MISSILE: &Tag = TAG_MAP.get("Missile");
 
 
 pub struct Entity<'a> {
     sprite: Object<'a>,
-    position: Vector2D<u16>,
+    position: Vector2D<i32>,
     velocity: i32,
     collision_mask: Vector2D<u16>
 }
@@ -67,54 +67,87 @@ impl <'a> Entity <'a> {
 }
 
 pub struct Ammo {
-    ammo_entity: Entity,
-    entity_shooting: Entity <'a>,
+    // ammo_entity: Entity,
+    // entity_shooting: Entity <'a>,
 }
 
-impl Ammo {
-    pub fn new(controller: &'a ObjectController, entity_shooting:  Entity <'a>) {
-        let mut ammo_entity = Entity::new(controller, MISSILE, (6_u16, 14_u16).into());
+// impl Ammo {
+//     pub fn new(controller: &'a ObjectController, entity_shooting:  Entity <'a>) {
+//         let mut ammo_entity = Entity::new(controller, MISSILE, (6_u16, 14_u16).into());
 
-        ammo_entity.position = entity_shooting.position;
-        ammo_entity.sprite.set_x(ammo_entity.position.x).set_y(ammo_entity.position.y).show();
+//         ammo_entity.position = entity_shooting.position;
+//         ammo_entity.sprite.set_x(ammo_entity.position.x).set_y(ammo_entity.position.y).show();
 
-        Ammo {
-            ammo_entity,
-            entity_shooting,
+//         // Ammo {
+//         //     ammo_entity,
+//         //     entity_shooting,
+//         // }
+//     }
+
+//     // pub fn fire(controller: &'a ObjectController, entity_shooting:  Entity <'a>){
+//     //     Ammo::new(controller, entity_shooting);
+//     // }
+
+//     // pub fn update_position(&mut self, new_position: Vector2D<u16>) {
+//     //     self.ammo_entity.position = new_position;
+//     //     self.ammo_entity.sprite.set_x(new_position.x).set_y(new_position.y);
+//     // }
+// }
+
+struct Enemy<'a> {
+    alien: Entity<'a>
+}
+
+impl <'a> Enemy <'a> {
+    fn new(controller: &'a ObjectController, start_position: Vector2D<i32>) -> Self {
+        let mut alien = Entity::new(controller, ALIEN1, (6_u16, 14_u16).into());
+    
+        alien.position = start_position;
+        alien.sprite.set_x(alien.position.x as u16).set_y(alien.position.y as u16).show();
+
+        Enemy {
+            alien,
         }
     }
 
-    pub fn fire(controller: &'a ObjectController, entity_shooting:  Entity <'a>){
-        Ammo::new(controller, entity_shooting);
+    pub fn update_position(&mut self, new_x: i32) {
+        self.alien.position.x = new_x;
+        self.alien.sprite.set_x(new_x as u16);
     }
 
-    pub fn update_position(&mut self, new_position: Vector2D<u16>) {
-        self.ammo_entity.position = new_position;
-        self.ammo_entity.sprite.set_x(new_position.x).set_y(new_position.y);
+    // Updates ther alien position on the map
+    pub fn update_frame(&mut self) {
+        
+        if self.alien.position.x == 0 || self.alien.position.x == agb::display::WIDTH - 16 {
+            self.alien.velocity = -self.alien.velocity;
+        }
+
+        let new_x = self.alien.position.x + self.alien.velocity;
+        self.update_position(new_x)
     }
 }
 
 struct Player<'a> {
     space_ship: Entity<'a>,
-    ammo: Vec<Ammo>,
+    // ammo: Vec<Ammo>,
 }
 
 impl <'a> Player <'a> {
-    fn new(controller: &'a ObjectController, start_position: Vector2D<u16>) -> Self {
+    fn new(controller: &'a ObjectController, start_position: Vector2D<i32>) -> Self {
         let mut space_ship = Entity::new(controller, SPACE_SHIP, (6_u16, 14_u16).into());
     
         space_ship.position = start_position;
-        space_ship.sprite.set_x(space_ship.position.x).set_y(space_ship.position.y).show();
+        space_ship.sprite.set_x(space_ship.position.x as u16).set_y(space_ship.position.y as u16).show();
 
         Player {
             space_ship,
-            ammo: []
+            // ammo: []
         }
     }
 
-    pub fn update_position(&mut self, new_x: u16) {
+    pub fn update_position(&mut self, new_x: i32) {
         self.space_ship.position.x = new_x;
-        self.space_ship.sprite.set_x(new_x);
+        self.space_ship.sprite.set_x(new_x as u16);
     }
 
 
@@ -128,11 +161,11 @@ impl <'a> Player <'a> {
             self.update_position(new_x);
         }
         if input.is_pressed(Button::RIGHT) {
-            let new_x = if self.space_ship.position.x == agb::display::WIDTH as u16 - 16 { self.space_ship.position.x } else { self.space_ship.position.x + 1};
+            let new_x = if self.space_ship.position.x == agb::display::WIDTH - 16 { self.space_ship.position.x } else { self.space_ship.position.x + 1};
             self.update_position(new_x);
         }
         if input.is_pressed(Button::A) {
-            Ammo::new(controller, self);
+            // Ammo::new(controller, self);
         }
         // TODO: Update the ammo's frame
     }
@@ -149,7 +182,7 @@ fn gba_entry(mut gba: agb::Gba) -> ! {
 
 fn main(mut gba: agb::Gba) -> ! {
 
-    const BOTTOM_OF_SCREEN_OFFSET: u16 = 30;
+    const BOTTOM_OF_SCREEN_OFFSET: i32 = 30;
 
     // Get the OAM manager
     let display_object = gba.display.object.get();
@@ -159,43 +192,19 @@ fn main(mut gba: agb::Gba) -> ! {
 
     // Create an object with the player_craft sprite
     let mut player_craft = Player::new(&display_object, 
-        Vector2D { x: (50), y: (agb::display::HEIGHT as u16 - BOTTOM_OF_SCREEN_OFFSET) });
+        Vector2D { x: (50), y: (agb::display::HEIGHT - BOTTOM_OF_SCREEN_OFFSET) });
 
     // Adds alien to the map
-    let mut alien = display_object.object_sprite(ALIEN1.sprite(0));
+    let mut alien = Enemy::new(&display_object, 
+        Vector2D { x: (50), y: (40) });
 
-    alien.set_x(50).set_y(50).show();
-
-    // let mut player_craft_x = 50;
-    let mut alien_x = 50;
-    // let mut x_velocity = 3;
-    let mut ax_velo = 1;
 
 loop {
     // This will calculate the new position and enforce the position
     // of the player_craft remains within the screen
-    // player_craft_x = (player_craft_x + x_velocity).clamp(0, agb::display::WIDTH - 16);
     button_object.update();
     player_craft.update_frame(&button_object);
-
-    // This will calculate the new position and enforce the position
-    // of the alien remains within the screen
-    alien_x = (alien_x + ax_velo).clamp(0, agb::display::WIDTH - 16);
-
-    // We check if the player_craft reaches the edge of the screen and reverse it's direction
-    // if player_craft_x == 0 || player_craft_x == agb::display::WIDTH - 16 {
-    //     x_velocity = -x_velocity;
-    // }
-
-    // We check if the alien reaches the edge of the screen and reverse it's direction
-    if alien_x == 0 || alien_x == agb::display::WIDTH - 16 {
-        ax_velo = -ax_velo;
-    }
-
-    // Set the position of the player_craft and alien to match our new calculated position
-    // For the player craft the Y doesn't matter
-    // player_craft.update_position(player_craft_x as u16);
-    alien.set_x(alien_x as u16);
+    alien.update_frame();
 
     // Wait for vblank, then commit the objects to the screen
     agb::display::busy_wait_for_vblank();
