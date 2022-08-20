@@ -14,25 +14,29 @@
 #![cfg_attr(test, reexport_test_harness_main = "test_main")]
 #![cfg_attr(test, test_runner(agb::test_runner::test_runner))]
 
+extern crate alloc;
+
+use alloc::vec::Vec;
 use agb::{include_aseprite,
-    display::{object::{Graphics, Tag, ObjectController, Object, TagMap}, Priority},
-    input::{self, Button, ButtonController}, fixnum::{Vector2D, FixedNum}, println,
+          display::{object::{Graphics, Tag, ObjectController, Object, TagMap}, Priority},
+          input::{self, Button, ButtonController}, fixnum::{Vector2D, FixedNum}, println,
 };
+use agb::display::tiled::{PartialUpdateStatus, RegularMap, TileIndex, VRamManager};
+use agb::display::{HEIGHT, WIDTH};
+use agb::hash_map::HashMap;
 // use alloc::vec::Vec;
 
-// type FixedNumberType = FixedNum<10>;
+type FixedNumberType = FixedNum<10>;
 
-// pub struct Level {
-//     background: &'static [u16],
-//     foreground: &'static [u16],
-//     dimensions: Vector2D<u32>,
-//     collision: &'static [u32],
+pub struct Level {
+    background: &'static [u16],
+    foreground: &'static [u16],
+    dimensions: Vector2D<u32>,
+    collision: &'static [u32],
 
-//     slimes: &'static [(i32, i32)],
-//     snails: &'static [(i32, i32)],
-//     enemy_stops: &'static [(i32, i32)],
-//     start_pos: (i32, i32),
-// }
+    enemy_stops: &'static [(i32, i32)],
+    start_pos: (i32, i32),
+}
 
 
 // Import the sprites in to this constant. This holds the sprite 
@@ -115,7 +119,7 @@ impl <'a> Enemy <'a> {
         self.alien.sprite.set_x(new_x as u16);
     }
 
-    // Updates ther alien position on the map
+    // Updates the alien position on the map
     pub fn update_frame(&mut self) {
         
         if self.alien.position.x == 0 || self.alien.position.x == agb::display::WIDTH - 16 {
@@ -133,10 +137,11 @@ struct Player<'a> {
 }
 
 impl <'a> Player <'a> {
-    fn new(controller: &'a ObjectController, start_position: Vector2D<i32>) -> Self {
+    fn new(controller: &'a ObjectController) -> Self {
+        const BOTTOM_OF_SCREEN_OFFSET: i32 = 30;
         let mut space_ship = Entity::new(controller, SPACE_SHIP, (6_u16, 14_u16).into());
     
-        space_ship.position = start_position;
+        space_ship.position = Vector2D { x: (50), y: (agb::display::HEIGHT - BOTTOM_OF_SCREEN_OFFSET) };
         space_ship.sprite.set_x(space_ship.position.x as u16).set_y(space_ship.position.y as u16).show();
 
         Player {
@@ -172,6 +177,51 @@ impl <'a> Player <'a> {
 }
 
 
+struct PlayingLevel<'a> {
+    timer: i32,
+    // background: Map<'a>,
+    input: ButtonController,
+    player: Player<'a>,
+
+    // enemies: [Enemy<'a>; 16],
+}
+
+impl<'a> PlayingLevel<'a> {
+    fn open_level(
+        level: &'a Level,
+        object_control: &'a ObjectController,
+        input: ButtonController,
+    ) -> Self {
+        // let mut e: [Enemy<'a>; 16] = Default::default();
+        // let mut enemy_count = 0;
+        // for &slime in level.slimes {
+        //     e[enemy_count] = enemies::Enemy::new_slime(object_control, slime.into());
+        //     enemy_count += 1;
+        // }
+        //
+        // for &snail in level.snails {
+        //     e[enemy_count] = enemies::Enemy::new_snail(object_control, snail.into());
+        //     enemy_count += 1;
+        // }
+
+        // let background_position = (
+        //     (start_pos.x - WIDTH / 2)
+        //         .clamp(0.into(), ((level.dimensions.x * 8) as i32 - WIDTH).into()),
+        //     (start_pos.y - HEIGHT / 2)
+        //         .clamp(0.into(), ((level.dimensions.y * 8) as i32 - HEIGHT).into()),
+        // )
+        //     .into();
+
+        PlayingLevel {
+            timer: 0,
+            player: Player::new(object_control),
+            input,
+            // enemies: e,
+        }
+    }
+}
+
+
 // The main function must take 1 arguments and never return. The agb::entry decorator
 // ensures that everything is in order. `agb` will call this after setting up the stack
 // and interrupt handlers correctly. It will also handle creating the `Gba` struct for you.
@@ -181,8 +231,7 @@ fn gba_entry(mut gba: agb::Gba) -> ! {
 }
 
 fn main(mut gba: agb::Gba) -> ! {
-
-    const BOTTOM_OF_SCREEN_OFFSET: i32 = 30;
+    let (tiled, mut vram) = gba.display.video.tiled0();
 
     // Get the OAM manager
     let display_object = gba.display.object.get();
@@ -191,8 +240,7 @@ fn main(mut gba: agb::Gba) -> ! {
     let mut button_object = agb::input::ButtonController::new();
 
     // Create an object with the player_craft sprite
-    let mut player_craft = Player::new(&display_object, 
-        Vector2D { x: (50), y: (agb::display::HEIGHT - BOTTOM_OF_SCREEN_OFFSET) });
+    let mut player_craft = Player::new(&display_object);
 
     // Adds alien to the map
     let mut alien = Enemy::new(&display_object, 
